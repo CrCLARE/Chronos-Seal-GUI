@@ -24,7 +24,3 @@ Config/
 Files/
 *.log
 _cs_*
-
-# 内核签名产物（由 CI 生成）
-Tools/**/manifest.json
-Tools/**/manifest.sig
