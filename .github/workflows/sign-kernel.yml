@@ -1,12 +1,12 @@
 name: Sign Kernel
 
 on:
-  push:
-    paths:
-      - 'Tools/**/*.js'
-      - 'Tools/**/*.html'
-      - 'Tools/**/*.tmpl'
   workflow_dispatch:
+    inputs:
+      signing_key:
+        description: 'Ed25519 私钥（Base64，44 字符）'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -26,11 +26,19 @@ jobs:
           node-version: '20'
 
       - name: Write signing key
-        shell: bash
         env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_KEY: ${{ github.event.inputs.signing_key }}
         run: |
-          echo "$SIGNING_KEY" > /tmp/private.key
+          # 关键：把私钥值加入日志屏蔽列表，防止后续误打印
+          echo "::add-mask::$SIGNING_KEY"
+          # 用 printf 而不是 echo，避免末尾换行污染 Base64
+          printf '%s' "$SIGNING_KEY" > /tmp/private.key
+          KEY_LEN=$(wc -c < /tmp/private.key)
+          echo "Key written: $KEY_LEN bytes"
+          if [ "$KEY_LEN" -ne 44 ]; then
+            echo "::error::Key length should be 44 bytes, got $KEY_LEN"
+            exit 1
+          fi
 
       - name: Sign all kernel versions
         shell: bash
