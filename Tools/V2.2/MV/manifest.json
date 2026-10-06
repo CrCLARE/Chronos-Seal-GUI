@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-10-06T14:35:15.853Z",
+  "files": {
+    "CLARE_Shell.mv.tmpl": "da45d689b50e6ef262ad57135e28492bdba9af18b52e69d0d973da68ae4620ca",
+    "encrypt_assets_mv.js": "d795ca8d380cd42a5d0b9b97eec6b9ff8b44d2dcd8091c77c29b10ef970fb35d",
+    "index.html": "29666180e370477d48887b10b594d3999ae4c5008b9607168e06e1bcbe7b2694",
+    "mv_build.js": "83671b91d22f0233d031054c23722947ac0ad3acbeab53a47e3247e29c36e4d5",
+    "patch_builder_mv.js": "2fc4c0c967b77148ee6a4410b997c6889c1897625c9f5bd1dc0becacb558a713"
+  }
+}

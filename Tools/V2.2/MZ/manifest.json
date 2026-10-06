@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-10-06T14:35:15.881Z",
+  "files": {
+    "encrypt_assets.js": "479db1d96e44fdd41dba9c0a06072776e27f21bf1f31cbe76bff75c1140e7218",
+    "index.html": "160bcf79b7904de20bf6cc5bf25d478da6c229b58ec68cd0d6f64c4755ec5b24",
+    "patch_builder.js": "71fdab8e623f60b8766752302854e12eec4427be58d6d65f2737f7169afe2314",
+    "shells/CLARE_AssetPreloader.js": "f893f7297179616ba5c43414bc3f8012c17afaa99577a81b6eaa8ce5a8763abf",
+    "shells/CLARE_DLCManager.js": "c10e1e9398f46a211c6ca22d39b616f1dcccdba693be2e68c13dcd0c205687dd",
+    "shells/CLARE_ImageCache.js": "1e0b1b886a79fc79a7872f6206b07fd01baa5f222dcad1f749ac1f778d663c4f",
+    "shells/CLARE_LocalizationCore.js": "88c4af2f96797c1f3a6e011a17c8ac874fe00d1ea7a131ce34345abb737c7f4a",
+    "shells/CLARE_SaveIntegrity.js": "06c31a466156d8adf85523125f6dbb0070cd8358c7146bb6ed58878369451da7"
+  }
+}
