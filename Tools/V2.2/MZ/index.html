@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="user-scalable=no">
+        <link rel="icon" href="icon/icon.png" type="image/png">
+        <link rel="apple-touch-icon" href="icon/icon.png">
+        <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
+        <title>@@GAME_NAME@@</title>
+    </head>
+    <body style="background-color: black">
+
+        <!-- ============================================================ -->
+        <!-- 1. 资源管理层                                                 -->
+        <!--    加载项目的资源管理插件，负责解码加速与缓存复用。            -->
+        <!-- ============================================================ -->
+        <script type="text/javascript" src="js/plugins/@@SHELL_NAME@@.js"></script>
+
+        <!-- ============================================================ -->
+        <!-- 2. 资源工具链探测                                             -->
+        <!--    确认资源管理层已就绪，获取其内部工具入口。                  -->
+        <!-- ============================================================ -->
+        <script type="text/javascript">
+        (function() {
+            'use strict';
+
+            function _pickBridge() {
+                if (window.__cs_bridge && typeof window.__cs_bridge._decode === 'function') {
+                    console.log('[Resource] toolchain: ready');
+                    return window.__cs_bridge;
+                }
+                console.warn('[Resource] toolchain unavailable.');
+                return null;
+            }
+
+            window._resource_toolchain = _pickBridge();
+        })();
+        </script>
+
+        <!-- ============================================================ -->
+        <!-- 3. RPG Maker MZ 引擎脚本                                      -->
+        <!-- ============================================================ -->
+        <script type="text/javascript" src="js/libs/pixi.js"></script>
+        <script type="text/javascript" src="js/libs/pixi-tilemap.js"></script>
+        <script type="text/javascript" src="js/libs/pixi-picture.js"></script>
+        <script type="text/javascript" src="js/libs/fpsmeter.js"></script>
+        <script type="text/javascript" src="js/libs/lz-string.js"></script>
+        <script type="text/javascript" src="js/libs/iphone-inline-video.browser.js"></script>
+        <script type="text/javascript" src="js/rpg_core.js"></script>
+        <script type="text/javascript" src="js/rpg_managers.js"></script>
+        <script type="text/javascript" src="js/rpg_objects.js"></script>
+        <script type="text/javascript" src="js/rpg_scenes.js"></script>
+        <script type="text/javascript" src="js/rpg_sprites.js"></script>
+        <script type="text/javascript" src="js/rpg_windows.js"></script>
+
+        <!-- ============================================================ -->
+        <!-- 4. 插件加载                                                   -->
+        <!-- ============================================================ -->
+        <script type="text/javascript" src="js/plugins.js"></script>
+
+        <!-- ============================================================ -->
+        <!-- 5. 资源加载优化层                                             -->
+        <!--                                                               -->
+        <!--    目的：                                                      -->
+        <!--      在引擎发起资源请求时，提前介入请求流程，                   -->
+        <!--      对压缩或编码过的资源做透明解码，减少渲染阻塞。            -->
+        <!--                                                               -->
+        <!--    兼容：                                                      -->
+        <!--      只处理图片与音频扩展名；其他请求原样透传。                -->
+        <!--      响应类型非 arraybuffer 时不做处理，避免破坏 JSON 加载。   -->
+        <!--                                                               -->
+        <!--    安全：                                                      -->
+        <!--      任何异常都降级到原生请求流程，确保游戏不因优化层失败而崩。 -->
+        <!-- ============================================================ -->
+        <script type="text/javascript">
+        (function() {
+            'use strict';
+
+            var _tool = window._resource_toolchain;
+            if (!_tool || typeof _tool._decode !== 'function') {
+                console.warn('[Resource] toolchain unavailable. Using native loader.');
+                return;
+            }
+
+            var _nw = (typeof nw !== 'undefined') ? nw : null;
+            var _req = (_nw && _nw.require) ? _nw.require : require;
+            var _fs  = _req('fs');
+            var _path = _req('path');
+            var _Buffer = (typeof Buffer !== 'undefined') ? Buffer : _req('buffer').Buffer;
+
+            var _baseDir = (_nw && _nw.App && _nw.App.startPath)
+                ? _nw.App.startPath
+                : process.cwd();
+
+            try {
+                if (_fs.existsSync(_path.join(_baseDir, 'www'))) {
+                    _baseDir = _path.join(_baseDir, 'www');
+                }
+            } catch (e) { /* 忽略探测异常 */ }
+
+            var _targetExts = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif',
+                               '.ogg', '.m4a', '.mp3', '.wav'];
+
+            function _isTargetUrl(url) {
+                if (typeof url !== 'string' || url.length === 0) return false;
+                var clean = url.split('?')[0].split('#')[0];
+                var lower = clean.toLowerCase();
+                for (var i = 0; i < _targetExts.length; i++) {
+                    if (lower.endsWith(_targetExts[i])) return true;
+                }
+                return false;
+            }
+
+            function _resolveResourcePath(url) {
+                var clean = url.split('?')[0].split('#')[0];
+
+                if (clean.startsWith('file:///')) {
+                    clean = clean.slice(8);
+                } else if (clean.startsWith('file://')) {
+                    clean = clean.slice(7);
+                }
+
+                clean = clean.replace(/\\/g, '/');
+
+                var isWinAbs  = /^[A-Za-z]:\//.test(clean);
+                var isUnixAbs = clean.startsWith('/');
+                var absPath;
+
+                if (isWinAbs) {
+                    absPath = clean;
+                } else if (isUnixAbs) {
+                    if (/^\/[A-Za-z]:\//.test(clean)) {
+                        absPath = clean.slice(1);
+                    } else {
+                        absPath = clean;
+                    }
+                } else {
+                    if (clean.startsWith('./')) clean = clean.slice(2);
+                    absPath = _path.resolve(_baseDir, clean);
+                }
+
+                var relPath = _path.relative(_baseDir, absPath).replace(/\\/g, '/');
+
+                if (relPath.startsWith('..') || _path.isAbsolute(relPath)) {
+                    return null;
+                }
+
+                return { absPath: absPath, relPath: relPath };
+            }
+
+            function _decodeResource(url) {
+                var resolved = _resolveResourcePath(url);
+                if (!resolved) return null;
+
+                var packedPath = resolved.absPath + '.enc';
+                var readPath = _fs.existsSync(packedPath) ? packedPath : resolved.absPath;
+
+                if (!_fs.existsSync(readPath)) return null;
+
+                var packed = _fs.readFileSync(readPath);
+                var result = _tool._decode(packed, resolved.relPath);
+
+                if (!result || !result.ok || !result.data) {
+                    console.warn('[Resource] decode failed: ' + resolved.relPath +
+                        ' (code=' + (result ? result.errCode : 'unknown') + ')');
+                    return null;
+                }
+
+                var buf = result.data;
+                if (_Buffer.isBuffer(buf)) {
+                    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+                }
+                if (buf instanceof ArrayBuffer) return buf;
+                return new Uint8Array(buf).buffer;
+            }
+
+            if (!XMLHttpRequest.prototype._resource_optimized) {
+                var _XHR_open = XMLHttpRequest.prototype.open;
+                var _XHR_send = XMLHttpRequest.prototype.send;
+
+                XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+                    this._res_url = url;
+                    this._res_method = method;
+                    return _XHR_open.call(this, method, url, async, user, password);
+                };
+
+                XMLHttpRequest.prototype.send = function(data) {
+                    var self = this;
+                    var url = this._res_url || '';
+
+                    if (!_isTargetUrl(url)) {
+                        return _XHR_send.call(this, data);
+                    }
+
+                    if (self.responseType && self.responseType !== 'arraybuffer') {
+                        return _XHR_send.call(this, data);
+                    }
+
+                    try {
+                        var arrayBuffer = _decodeResource(url);
+                        if (!arrayBuffer) {
+                            return _XHR_send.call(this, data);
+                        }
+
+                        setTimeout(function() {
+                            try {
+                                Object.defineProperty(self, 'readyState', {
+                                    value: 4, writable: false, configurable: true
+                                });
+                                Object.defineProperty(self, 'status', {
+                                    value: 200, writable: false, configurable: true
+                                });
+                                Object.defineProperty(self, 'response', {
+                                    value: arrayBuffer, writable: false, configurable: true
+                                });
+                                Object.defineProperty(self, 'responseText', {
+                                    value: '', writable: false, configurable: true
+                                });
+
+                                if (typeof self.onreadystatechange === 'function') {
+                                    self.onreadystatechange();
+                                }
+                                if (typeof self.onload === 'function') {
+                                    self.onload();
+                                }
+                                if (typeof self.onloadend === 'function') {
+                                    self.onloadend();
+                                }
+                            } catch (e) {
+                                console.warn('[Resource] XHR override failed:', e.message);
+                            }
+                        }, 0);
+
+                        return;
+                    } catch (e) {
+                        console.warn('[Resource] XHR path exception:', e.message);
+                        return _XHR_send.call(this, data);
+                    }
+                };
+
+                XMLHttpRequest.prototype._resource_optimized = true;
+                console.log('[Resource] XHR path installed.');
+            }
+
+            if (typeof fetch === 'function' && !window._resource_fetch_optimized) {
+                var _origFetch = fetch;
+                window.fetch = function(input, init) {
+                    var url = (typeof input === 'string') ? input : (input && input.url);
+
+                    if (!_isTargetUrl(url)) {
+                        return _origFetch.apply(this, arguments);
+                    }
+
+                    try {
+                        var arrayBuffer = _decodeResource(url);
+                        if (!arrayBuffer) {
+                            return _origFetch.apply(this, arguments);
+                        }
+
+                        var lower = url.toLowerCase();
+                        var contentType = 'application/octet-stream';
+                        if (lower.endsWith('.png'))  contentType = 'image/png';
+                        else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) contentType = 'image/jpeg';
+                        else if (lower.endsWith('.webp')) contentType = 'image/webp';
+                        else if (lower.endsWith('.ogg'))  contentType = 'audio/ogg';
+                        else if (lower.endsWith('.m4a'))  contentType = 'audio/mp4';
+                        else if (lower.endsWith('.mp3'))  contentType = 'audio/mpeg';
+                        else if (lower.endsWith('.wav'))  contentType = 'audio/wav';
+
+                        return Promise.resolve(new Response(arrayBuffer, {
+                            status: 200,
+                            statusText: 'OK',
+                            headers: { 'Content-Type': contentType }
+                        }));
+                    } catch (e) {
+                        console.warn('[Resource] fetch path exception:', e.message);
+                        return _origFetch.apply(this, arguments);
+                    }
+                };
+                window._resource_fetch_optimized = true;
+                console.log('[Resource] fetch path installed.');
+            }
+
+        })();
+        </script>
+
+        <!-- ============================================================ -->
+        <!-- 6. 启动引擎                                                   -->
+        <!-- ============================================================ -->
+        <script type="text/javascript" src="js/main.js"></script>
+
+    </body>
+</html>

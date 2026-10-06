@@ -1,0 +1,245 @@
+/**
+ * ============================================================
+ * Chronos Seal — Time as the seal, action as the key,
+ * time itself guards originality.
+ * This freedom is dedicated to every independent creator,
+ * and to that visitor, Liberty, who has not set foot on the island
+ * in a long time.
+ * ============================================================
+ */
+
+@@SHELL_HEADER@@
+
+(function() {
+    'use strict';
+
+    //=========================================================================
+    // Build-time constants (injected by mv_config.bat)
+    //=========================================================================
+
+    var GAME_VERSION_CONST = @@GAME_VERSION_VALUE@@;
+    var RELEASE_DATE_CONST = @@RELEASE_DATE_VALUE@@;
+    var SEED_HEX           = @@SEED_HEX_VALUE@@;
+    var SEED_SALT_CONST    = @@SEED_SALT_VALUE@@;
+    var PLUGIN_NAME_CONST  = @@PLUGIN_NAME_VALUE@@;
+
+    //=========================================================================
+    // Environment
+    //=========================================================================
+
+    var _nw = (typeof nw !== 'undefined') ? nw : null;
+    var _req = (_nw && _nw.require) ? _nw.require : require;
+
+    var _nodeCrypto = null;
+    try { _nodeCrypto = _req('crypto'); } catch (e) { /* fallback */ }
+
+    //=========================================================================
+    // Utility helpers
+    //=========================================================================
+
+    function _hexToBytes(hex) {
+        var out = [];
+        for (var i = 0; i < hex.length; i += 2) {
+            out.push(parseInt(hex.substr(i, 2), 16));
+        }
+        return Buffer.from(out);
+    }
+
+    function _normPath(p) {
+        var out = '';
+        for (var i = 0; i < p.length; i++) {
+            var c = p.charCodeAt(i);
+            if (c === 0x5C) out += '/';
+            else if (c >= 0x41 && c <= 0x5A) out += String.fromCharCode(c + 0x20);
+            else out += String.fromCharCode(c);
+        }
+        return out;
+    }
+
+    function _constantTimeEquals(a, b, n) {
+        var diff = 0;
+        for (var i = 0; i < n; i++) diff |= a[i] ^ b[i];
+        return diff === 0;
+    }
+
+    //=========================================================================
+    // Key derivation
+    //=========================================================================
+
+    // 惰性派生标记：undefined 表示未初始化，false 表示派生失败
+    var _masterKey = undefined;
+
+    function _deriveMasterKey() {
+        // 如果已经派生过（包括失败缓存），直接返回
+        if (_masterKey !== undefined) return _masterKey;
+
+        if (!_nodeCrypto) {
+            _masterKey = false;
+            return false;
+        }
+
+        try {
+            var seedBuf = _hexToBytes(SEED_HEX);
+
+            // 魔数拆分：运行时等价于 0x9E3779B9，打断静态识别锚点
+            var _constA = 0x5A5A5A5A;
+            var _constB = 0xC46D23E3;
+            var _LCG_ADD = (_constA ^ _constB) >>> 0;
+
+            for (var round = 0; round < 8; round++) {
+                var s = (SEED_SALT_CONST ^ Math.imul(round, _LCG_ADD)) >>> 0;
+                for (var i = 0; i < seedBuf.length; i++) {
+                    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+                    var v = seedBuf[i] & 0xFF;
+                    v = (v ^ ((s >>> 24) & 0xFF)) & 0xFF;
+                    v = (((v << 3) | (v >>> 5)) & 0xFF) >>> 0;
+                    v = ((v + ((s >>> 16) & 0xFF)) & 0xFF) >>> 0;
+                    v = (v ^ ((s >>> 8) & 0xFF)) & 0xFF;
+                    seedBuf[i] = v;
+                }
+            }
+
+            var k1 = _nodeCrypto.createHmac('sha256', seedBuf)
+                .update('MASTER:' + GAME_VERSION_CONST + RELEASE_DATE_CONST).digest();
+            var k2 = _nodeCrypto.createHmac('sha256', seedBuf)
+                .update(Buffer.concat([Buffer.from('STAGE2:'), k1])).digest();
+            var k3 = _nodeCrypto.createHmac('sha256', k1)
+                .update(Buffer.concat([Buffer.from('STAGE3:'), k2])).digest();
+            var master = _nodeCrypto.createHmac('sha256', k3)
+                .update('MASTER:FINAL').digest();
+
+            _masterKey = master;
+            return master;
+        } catch (e) {
+            _masterKey = false;
+            return false;
+        }
+    }
+
+    function _deriveSubKeys(relativePath) {
+        // 惰性触发：只有在真正需要解密具体资源路径时才派生主密钥
+        var master = _deriveMasterKey();
+        if (!master) return null;
+
+        var norm = _normPath(relativePath);
+
+        var as1 = _nodeCrypto.createHmac('sha256', master).update('AES:S1:' + norm).digest();
+        var as2 = _nodeCrypto.createHmac('sha256', master)
+            .update(Buffer.concat([Buffer.from('AES:S2:'), as1])).digest();
+        var as3 = _nodeCrypto.createHmac('sha256', as1)
+            .update(Buffer.concat([Buffer.from('AES:S3:'), as2])).digest();
+        var aesKey = _nodeCrypto.createHmac('sha256', as3).update('AES:FINAL:' + norm).digest();
+
+        var hs1 = _nodeCrypto.createHmac('sha256', master).update('HMAC:S1:' + norm).digest();
+        var hs2 = _nodeCrypto.createHmac('sha256', master)
+            .update(Buffer.concat([Buffer.from('HMAC:S2:'), hs1])).digest();
+        var hs3 = _nodeCrypto.createHmac('sha256', hs1)
+            .update(Buffer.concat([Buffer.from('HMAC:S3:'), hs2])).digest();
+        var hmacKey = _nodeCrypto.createHmac('sha256', hs3).update('HMAC:FINAL:' + norm).digest();
+
+        return { aesKey: aesKey, hmacKey: hmacKey };
+    }
+
+    //=========================================================================
+    // Decryption
+    //=========================================================================
+
+    var _MAGIC = Buffer.from('CHRNSLSE', 'ascii');
+    var _ASSET_VERSION = 0x01;
+    var _IV_LEN = 16;
+    var _HMAC_LEN = 32;
+    var _HEADER_LEN = 8 + 1 + 16 + 32;
+
+    function _decryptAsset(encodedData, relativePath) {
+        if (!_nodeCrypto || !Buffer.isBuffer(encodedData)) {
+            return { ok: false, data: null, errCode: 63 };
+        }
+        if (encodedData.length < _HEADER_LEN) {
+            return { ok: false, data: null, errCode: 63 };
+        }
+
+        for (var i = 0; i < 8; i++) {
+            if (encodedData[i] !== _MAGIC[i]) {
+                return { ok: false, data: null, errCode: 63 };
+            }
+        }
+        if (encodedData[8] !== _ASSET_VERSION) {
+            return { ok: false, data: null, errCode: 63 };
+        }
+
+        var offset = 9;
+        var iv = encodedData.slice(offset, offset + _IV_LEN);
+        offset += _IV_LEN;
+        var storedHmac = encodedData.slice(offset, offset + _HMAC_LEN);
+        offset += _HMAC_LEN;
+        var ciphertext = encodedData.slice(offset);
+
+        var subKeys = _deriveSubKeys(relativePath || '');
+        if (!subKeys) return { ok: false, data: null, errCode: -1 };
+
+        var hmacInput = Buffer.concat([
+            Buffer.from([_ASSET_VERSION]),
+            iv,
+            ciphertext
+        ]);
+        var computedHmac = _nodeCrypto.createHmac('sha256', subKeys.hmacKey)
+            .update(hmacInput).digest();
+
+        if (!_constantTimeEquals(computedHmac, storedHmac, _HMAC_LEN)) {
+            return { ok: false, data: null, errCode: 61 };
+        }
+
+        try {
+            var decipher = _nodeCrypto.createDecipheriv('aes-256-cbc', subKeys.aesKey, iv);
+            var plaintext = Buffer.concat([
+                decipher.update(ciphertext),
+                decipher.final()
+            ]);
+            return { ok: true, data: plaintext, errCode: 0 };
+        } catch (e) {
+            return { ok: false, data: null, errCode: 60 };
+        }
+    }
+
+    //=========================================================================
+    // Runtime shim
+    //=========================================================================
+
+    var _bootHooksInstalled = false;
+
+    function _installBootHooks() {
+        if (_bootHooksInstalled) return;
+        _bootHooksInstalled = true;
+    }
+
+    if (typeof Scene_Boot !== 'undefined' && Scene_Boot.prototype.start) {
+        var _Scene_Boot_start = Scene_Boot.prototype.start;
+        Scene_Boot.prototype.start = function() {
+            _Scene_Boot_start.call(this);
+            _installBootHooks();
+        };
+    } else {
+        _installBootHooks();
+    }
+
+    //=========================================================================
+    // Bridge
+    //=========================================================================
+
+    var _internalBridge = {
+        _decode:  _decryptAsset,
+        _open:    function() { return { ok: true }; },
+        _monitor: function() { return { triggered: false }; },
+        _stats:   function() { return {}; }
+    };
+
+    Object.freeze(_internalBridge);
+
+    Object.defineProperty(window, '__clare_locale_bridge', {
+        value: _internalBridge, writable: false, configurable: false, enumerable: false
+    });
+    Object.defineProperty(window, '__cs_bridge', {
+        value: _internalBridge, writable: false, configurable: false, enumerable: false
+    });
+
+})();
