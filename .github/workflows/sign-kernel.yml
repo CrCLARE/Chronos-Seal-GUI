@@ -1,0 +1,59 @@
+name: Sign Kernel
+
+on:
+  push:
+    paths:
+      - 'Tools/**/*.js'
+      - 'Tools/**/*.html'
+      - 'Tools/**/*.tmpl'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Write signing key
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          echo "$SIGNING_KEY" > /tmp/private.key
+
+      - name: Sign all kernel versions
+        shell: bash
+        run: |
+          for dir in Tools/*/MV Tools/*/MZ; do
+            if [ -d "$dir" ]; then
+              echo "==> Signing: $dir"
+              node sign.js "$dir" /tmp/private.key || true
+            fi
+          done
+
+      - name: Cleanup key
+        if: always()
+        run: rm -f /tmp/private.key
+
+      - name: Commit signed manifests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Tools/**/manifest.json Tools/**/manifest.sig 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: auto-sign kernel [skip ci]"
+            git push
+          fi
