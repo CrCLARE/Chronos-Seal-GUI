@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.github.com https://github.com https://proxy.crclare.top;" />
+<title>Chronos Seal</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="debug-bar"></div>
+
+<header class="titlebar">
+  <div class="brand">◈ Chronos Seal</div>
+  <div class="win-controls">
+    <button id="btn-min">─</button>
+    <button id="btn-close">✕</button>
+  </div>
+</header>
+
+<div class="wizard-container">
+  <section class="view active" id="view-setup-language">
+    <h1 data-i18n="oobe.title"></h1>
+    <p class="subtitle" data-i18n="oobe.lang.subtitle"></p>
+    <div class="options-grid" id="lang-options">
+      <div class="option-card active" data-value="zh"><span data-i18n="lang.zh"></span> <span class="check">✓</span></div>
+      <div class="option-card" data-value="en"><span data-i18n="lang.en"></span></div>
+    </div>
+    <div class="button-row">
+      <button class="btn-next" onclick="goTo('setup-engine')" data-i18n="nav.next"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-setup-engine">
+    <h1 data-i18n="oobe.title"></h1>
+    <p class="subtitle" data-i18n="oobe.engine.subtitle"></p>
+    <div class="options-grid" id="engine-options">
+      <div class="option-card" data-value="mv"><div class="option-title">MV</div><div class="option-sub" data-i18n="engine.mv.sub"></div></div>
+      <div class="option-card active" data-value="mz"><div class="option-title">MZ <span class="check">✓</span></div><div class="option-sub" data-i18n="engine.mz.sub"></div></div>
+    </div>
+    <div class="button-row">
+      <button class="btn-prev" onclick="goTo('setup-language')" data-i18n="nav.prev"></button>
+      <button class="btn-next" onclick="goTo('setup-node')" data-i18n="nav.next"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-setup-node">
+    <h1 data-i18n="oobe.title"></h1>
+    <p class="subtitle" id="node-status-text" data-i18n="node.checking"></p>
+    <div class="node-status-container">
+      <div class="node-info">
+        <div class="node-icon" style="color:#22c55e;">●</div>
+        <div class="node-version" id="node-version">...</div>
+      </div>
+      <div class="loading-spinner-small" id="node-spinner"></div>
+    </div>
+    <div class="button-row">
+      <button class="btn-prev" onclick="goTo('setup-engine')" data-i18n="nav.prev"></button>
+      <button class="btn-next" id="btn-node-next" onclick="goTo('setup-github')" disabled data-i18n="nav.next"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-setup-github">
+    <h1 data-i18n="oobe.title"></h1>
+    <p class="subtitle" data-i18n="oobe.github.subtitle"></p>
+    <div class="github-auth-box">
+      <button class="btn-github" id="btn-github-login"><span>➔</span> <span data-i18n="github.connect"></span></button>
+      <div class="gh-status" id="gh-status" data-i18n="github.notConnected"></div>
+    </div>
+    <div class="tips-box">
+      <h4 data-i18n="tips.title"></h4>
+      <p data-i18n="tips.line1"></p>
+      <p data-i18n="tips.line2"></p>
+      <p><span data-i18n="tips.deviceQ"></span> <a href="javascript:void(0)" onclick="startDeviceFlow()" style="color: var(--accent);" data-i18n="tips.deviceLink"></a></p>
+      <p><a href="javascript:void(0)" onclick="toggleOobeProxyInput()" style="color: var(--text-dim);font-size:12px;" id="oobe-proxy-toggle" data-i18n="tips.proxyToggle"></a></p>
+    </div>
+    <div id="oobe-proxy-box" style="display:none;width:100%;margin-bottom:24px;text-align:left;">
+      <div class="form-group" style="margin-bottom:8px;">
+        <label data-i18n="proxy.label"></label>
+        <div class="input-with-button">
+          <input type="text" id="oobe-proxy-input" placeholder="https://proxy.crclare.top" />
+          <button class="btn-browse" onclick="saveOobeProxyAddress()" data-i18n="proxy.save"></button>
+        </div>
+        <p class="form-hint" data-i18n="proxy.hint"></p>
+      </div>
+    </div>
+    <div class="button-row">
+      <button class="btn-prev" onclick="goTo('setup-node')" data-i18n="nav.prev"></button>
+      <button class="btn-next" onclick="goTo('welcome')" data-i18n="nav.next"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-welcome">
+    <h1 data-i18n="oobe.title"></h1>
+    <p class="subtitle" id="welcome-status-text" data-i18n="welcome.preparing"></p>
+    <div id="welcome-preparing">
+      <p class="desc" data-i18n="welcome.wait"></p>
+      <div class="loading-spinner"></div>
+      <p class="poem" id="welcome-poem" data-i18n="welcome.poem"></p>
+    </div>
+    <div id="welcome-ready" style="display:none;">
+      <div class="welcome-icon">✓</div>
+      <h2 data-i18n="welcome.ready"></h2>
+      <div class="button-row">
+        <button class="btn-prev" onclick="goTo('setup-github')" data-i18n="nav.prev"></button>
+        <button class="btn-next" onclick="goTo('dashboard')" data-i18n="welcome.enter"></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-dashboard">
+    <div class="dashboard-header">
+      <h1 id="dashboard-title"></h1>
+      <div class="connection-status" id="global-status-box"><span class="dot disconnected">●</span> <span data-i18n="status.notConnected"></span></div>
+    </div>
+    <div class="dashboard-cards">
+      <div class="dash-card" onclick="startSealFlow()"><div class="card-icon">◈</div><div class="card-title" data-i18n="dash.seal"></div></div>
+      <div class="dash-card" id="card-patch" onclick="handlePatchCardClick()"><div class="card-icon">⬡</div><div class="card-title" data-i18n="dash.patch"></div></div>
+      <div class="dash-card" onclick="goTo('settings')"><div class="card-icon">⚙</div><div class="card-title" data-i18n="dash.settings"></div></div>
+    </div>
+    <div class="dashboard-footer">
+      <div><span data-i18n="dash.currentPkg"></span> <span id="output-path-display" data-i18n="common.notSelected"></span></div>
+      <button class="btn-ghost" onclick="goTo('welcome')" data-i18n="dash.reinit"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-seal-config">
+    <div class="wizard-header">
+      <h2 id="seal-config-title"></h2>
+      <button class="btn-prev" onclick="goTo('dashboard')" data-i18n="nav.back"></button>
+    </div>
+    <div class="form-group">
+      <label id="seal-path-label"></label>
+      <div class="input-with-button">
+        <input type="text" id="seal-output-path" placeholder="C:\Release\..." readonly />
+        <button class="btn-browse" onclick="pickFolder('seal-output-path')" data-i18n="common.browse"></button>
+      </div>
+      <p class="form-hint" id="seal-path-hint"></p>
+    </div>
+    <div class="form-group"><label data-i18n="seal.gameName"></label><input type="text" id="seal-game-name" placeholder="My RPG Game" /></div>
+    <div class="form-group"><label data-i18n="seal.version"></label><input type="text" id="seal-version" placeholder="1.0.0" /></div>
+    <div class="button-row">
+      <button class="btn-next" onclick="sealConfigNext()" data-i18n="nav.next"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-seal-confirm">
+    <h2 data-i18n="confirm.title"></h2>
+    <div class="confirm-table">
+      <div class="confirm-row"><span data-i18n="seal.gameName"></span><strong id="confirm-game-name">-</strong></div>
+      <div class="confirm-row"><span data-i18n="seal.version"></span><strong id="confirm-version">-</strong></div>
+      <div class="confirm-row"><span data-i18n="confirm.engine"></span><strong id="confirm-engine">-</strong></div>
+      <div class="confirm-row"><span data-i18n="confirm.github"></span><strong id="confirm-github">-</strong></div>
+      <div class="confirm-row"><span data-i18n="confirm.path"></span><strong id="confirm-output">-</strong></div>
+    </div>
+    <div class="button-row">
+      <button class="btn-prev" onclick="goTo('seal-config')" data-i18n="nav.prevPlain"></button>
+      <button class="btn-next" onclick="goTo('seal-warning')" data-i18n="nav.next"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-seal-warning">
+    <div class="alert-box">
+      <div class="alert-icon">⚠</div>
+      <h2 data-i18n="warning.title"></h2>
+      <p class="alert-sub" data-i18n="warning.subtitle"></p>
+      <ul class="alert-list">
+        <li data-i18n="warning.1"></li>
+        <li data-i18n="warning.2"></li>
+        <li data-i18n="warning.3"></li>
+        <li data-i18n="warning.4"></li>
+      </ul>
+    </div>
+    <div class="button-row">
+      <button class="btn-prev" onclick="goTo('seal-confirm')" data-i18n="warning.cancel"></button>
+      <button class="btn-primary" onclick="startSeal()" data-i18n="warning.start"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-seal-progress">
+    <div class="progress-layout">
+      <div class="progress-left">
+        <div class="lock-animation">[SEAL]</div>
+        <h3 data-i18n="progress.title"></h3>
+        <ul class="step-list" id="seal-step-list"></ul>
+      </div>
+      <div class="progress-right">
+        <h3 data-i18n="progress.log"></h3>
+        <div class="log-box" id="seal-log-box"></div>
+        <div class="progress-bar-container"><div class="progress-bar-fill" id="seal-progress-fill"></div></div>
+        <div class="progress-text" id="seal-progress-text"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-seal-success">
+    <div class="success-box">
+      <div class="success-icon">✓</div>
+      <h2 data-i18n="sealOk.title"></h2>
+      <p data-i18n="sealOk.desc"></p>
+      <div class="output-path-box"><span data-i18n="sealOk.output"></span><code id="seal-final-path">-</code></div>
+    </div>
+    <div class="button-row">
+      <button class="btn-next" onclick="askPatchInit()" data-i18n="nav.next"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-patch-config">
+    <div class="wizard-header">
+      <h2 id="patch-config-title"></h2>
+      <button class="btn-prev" onclick="goTo('dashboard')" data-i18n="nav.back"></button>
+    </div>
+    <div class="form-group">
+      <label data-i18n="patch.step1"></label>
+      <div class="input-with-button">
+        <input type="text" id="patch-input-path" placeholder="C:\Project\..." readonly />
+        <button class="btn-browse" onclick="pickFolder('patch-input-path')" data-i18n="common.browse"></button>
+      </div>
+      <p class="form-hint" data-i18n="patch.hint1"></p>
+    </div>
+    <div class="form-group">
+      <label data-i18n="patch.step2"></label>
+      <div class="custom-select" id="game-select">
+        <div class="custom-select-trigger" onclick="toggleCustomSelect('game-select')">
+          <span class="custom-select-value" data-i18n="patch.pleaseSelect"></span>
+          <span class="custom-select-arrow">▾</span>
+        </div>
+        <div class="custom-select-options" id="game-select-options"></div>
+      </div>
+      <p class="form-hint" data-i18n="patch.hint2"></p>
+    </div>
+    <div class="button-row">
+      <button class="btn-prev" onclick="goTo('dashboard')" data-i18n="common.cancel"></button>
+      <button class="btn-primary" onclick="startPatch()" data-i18n="common.start"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-patch-progress">
+    <div class="progress-layout">
+      <div class="progress-left"><h3 id="patch-progress-title"></h3></div>
+      <div class="progress-right">
+        <h3 data-i18n="progress.log"></h3>
+        <div class="log-box" id="patch-log-box"></div>
+        <div class="progress-bar-container"><div class="progress-bar-fill" id="patch-progress-fill"></div></div>
+        <div class="progress-text" id="patch-progress-text"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-patch-success">
+    <div class="success-box">
+      <div class="success-icon">✓</div>
+      <h2 id="patch-success-title"></h2>
+      <p id="patch-success-desc"></p>
+      <div class="output-path-box" id="patch-success-output" style="display:none;">
+        <span data-i18n="patchOk.output"></span><code id="patch-final-path">-</code>
+      </div>
+    </div>
+    <button class="btn-next" onclick="goTo('dashboard')" data-i18n="common.doneHome"></button>
+  </section>
+
+  <section class="view" id="view-settings">
+    <div class="wizard-header">
+      <h2 data-i18n="settings.title"></h2>
+      <button class="btn-prev" onclick="goTo('dashboard')" data-i18n="nav.back"></button>
+    </div>
+    <div class="settings-list">
+      <div class="settings-item" onclick="goTo('settings-kernel')"><span class="settings-icon">◈</span><span class="settings-text" data-i18n="settings.kernel"></span><span class="settings-arrow" id="settings-kernel-current"></span></div>
+      <div class="settings-item" onclick="goTo('settings-github')"><span class="settings-icon">➔</span><span class="settings-text" data-i18n="settings.github"></span><span class="settings-arrow">→</span></div>
+      <div class="settings-item" onclick="goTo('settings-language')"><span class="settings-icon">文</span><span class="settings-text" data-i18n="settings.lang"></span><span class="settings-arrow" id="current-lang-display"></span></div>
+      <div class="settings-item" onclick="goTo('settings-engine')"><span class="settings-icon">⇄</span><span class="settings-text" data-i18n="settings.engine"></span><span class="settings-arrow" id="current-engine-display"></span></div>
+    </div>
+    <div class="about-box">
+      <h3 data-i18n="about.title"></h3>
+      <div class="about-version">Chronos Seal GUI V1.0</div>
+      <p class="about-desc" data-i18n="about.desc"></p>
+      <div class="random-tip-box" id="random-tip-box"></div>
+      <div class="links-box">
+        <a href="https://github.com/CrCLARE/Chronos-Seal" target="_blank" class="link-btn">GitHub</a>
+        <a href="https://docs.crclare.top" target="_blank" class="link-btn" data-i18n="about.docs"></a>
+        <a href="https://www.patreon.com/CrCLARE" target="_blank" class="link-btn">Patreon</a>
+        <a href="https://afdian.com/a/crclare" target="_blank" class="link-btn" data-i18n="about.afdian"></a>
+      </div>
+      <p class="copyright">© <span id="copyright-year"></span> CrCLARE Studio · Made by CLARE-XHL · MIT License</p>
+    </div>
+  </section>
+
+  <section class="view" id="view-settings-language">
+    <div class="wizard-header">
+      <h2 data-i18n="settings.lang"></h2>
+      <button class="btn-prev" onclick="goTo('settings')" data-i18n="nav.back"></button>
+    </div>
+    <div class="options-grid" id="settings-lang-options">
+      <div class="option-card active" data-value="zh"><span data-i18n="lang.zh"></span> <span class="check">✓</span></div>
+      <div class="option-card" data-value="en"><span data-i18n="lang.en"></span></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-settings-engine">
+    <div class="wizard-header">
+      <h2 data-i18n="settings.engine"></h2>
+      <button class="btn-prev" onclick="goTo('settings')" data-i18n="nav.back"></button>
+    </div>
+    <p class="subtitle" style="margin-bottom:24px;" data-i18n="engine.subtitle"></p>
+    <div class="options-grid" id="settings-engine-options">
+      <div class="option-card" data-value="mv"><div class="option-title">MV</div><div class="option-sub" data-i18n="engine.mv.sub"></div></div>
+      <div class="option-card" data-value="mz"><div class="option-title">MZ</div><div class="option-sub" data-i18n="engine.mz.sub"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-settings-kernel">
+    <div class="wizard-header">
+      <h2 data-i18n="settings.kernel"></h2>
+      <button class="btn-prev" onclick="goTo('settings')" data-i18n="nav.back"></button>
+    </div>
+    <p class="subtitle" style="margin-bottom:16px;"><span data-i18n="kernel.current"></span><strong id="kernel-current-version" style="color:var(--accent);">V2.2</strong></p>
+    <div class="settings-list" id="kernel-list"></div>
+    <div class="button-row">
+      <button class="btn-primary" onclick="checkKernelUpdate()" data-i18n="kernel.checkUpdate"></button>
+    </div>
+  </section>
+
+  <section class="view" id="view-settings-github">
+    <div class="wizard-header">
+      <h2 data-i18n="settings.github"></h2>
+      <button class="btn-prev" onclick="goTo('settings')" data-i18n="nav.back"></button>
+    </div>
+    <div class="confirm-table" style="margin-bottom:16px;">
+      <div class="confirm-row"><span data-i18n="gh.account"></span><strong id="gh-manage-account"></strong></div>
+      <div class="confirm-row"><span data-i18n="gh.token"></span><strong id="gh-manage-token-status"></strong></div>
+    </div>
+    <div class="settings-list">
+      <div class="settings-item" onclick="refreshGithubToken()"><span class="settings-icon">↻</span><span class="settings-text" data-i18n="gh.refresh"></span><span class="settings-arrow">→</span></div>
+      <div class="settings-item" onclick="toggleProxyInput()"><span class="settings-icon">⚙</span><span class="settings-text" data-i18n="gh.proxy"></span><span class="settings-arrow" id="gh-proxy-arrow" data-i18n="gh.advanced"></span></div>
+    </div>
+    <div id="proxy-input-box" style="display:none;width:100%;margin-bottom:16px;">
+      <div class="form-group" style="margin-bottom:8px;">
+        <label data-i18n="proxy.label"></label>
+        <div class="input-with-button">
+          <input type="text" id="gh-proxy-input" placeholder="https://proxy.crclare.top" />
+          <button class="btn-browse" onclick="saveProxyAddress()" data-i18n="proxy.save"></button>
+        </div>
+        <p class="form-hint" data-i18n="proxy.hint"></p>
+      </div>
+    </div>
+    <div class="button-row">
+      <button class="btn-danger" onclick="logoutGithub()" data-i18n="gh.logout"></button>
+    </div>
+  </section>
+</div>
+
+<div id="modal-patch-init" class="modal-overlay" style="display:none;">
+  <div class="modal-content">
+    <h3 data-i18n="patchInit.title"></h3>
+    <p data-i18n="patchInit.desc"></p>
+    <p class="modal-hint" data-i18n="patchInit.hint"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="handlePatchInitConfirm(false)" data-i18n="patchInit.skip"></button>
+      <button class="btn-primary" onclick="handlePatchInitConfirm(true)" data-i18n="patchInit.start"></button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-patch-warning" class="modal-overlay" style="display:none;">
+  <div class="modal-content">
+    <h3 class="modal-danger" data-i18n="patchWarn.title"></h3>
+    <p data-i18n="patchWarn.desc"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-patch-warning')" data-i18n="common.cancel"></button>
+      <button class="btn-danger" onclick="confirmPatchSkip()" data-i18n="patchWarn.confirm"></button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-device-flow" class="modal-overlay" style="display:none;">
+  <div class="modal-content">
+    <h3 data-i18n="device.title"></h3>
+    <p data-i18n="device.step1"></p>
+    <p style="font-family:Consolas,monospace;font-size:13px;color:var(--accent);background:#0a0a0e;padding:8px;border-radius:6px;word-break:break-all;margin-bottom:16px;">https://github.com/login/device</p>
+    <p data-i18n="device.step2"></p>
+    <div id="device-code-display" style="font-family:Consolas,monospace;font-size:28px;font-weight:bold;color:var(--accent);background:#0a0a0e;padding:16px;border-radius:8px;letter-spacing:4px;margin-bottom:16px;border:1px dashed var(--border);">----</div>
+    <p id="device-flow-status" style="font-size:13px;color:var(--accent);margin-bottom:24px;" data-i18n="device.waiting"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-device-flow')" data-i18n="common.cancel"></button>
+      <button class="btn-primary" onclick="openDeviceFlowUrl()" data-i18n="device.open"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // ============================================================
+  // i18n 字典
+  // ============================================================
+  var I18N = {
+    zh: {
+      'oobe.title': '嗨！欢迎来到 Chronos Seal！',
+      'oobe.lang.subtitle': '请选择语言以继续',
+      'oobe.engine.subtitle': '请选择 RPG Maker 版本以继续',
+      'oobe.github.subtitle': '请授权 GitHub 以继续',
+      'nav.next': '下一步 →',
+      'nav.prev': '← 上一步',
+      'nav.prevPlain': '上一步',
+      'nav.back': '← 返回',
+      'lang.zh': '简体中文',
+      'lang.en': 'English',
+      'engine.mv.sub': 'RPG Maker MV',
+      'engine.mz.sub': 'RPG Maker MZ',
+      'engine.subtitle': '请选择要使用的 RPG Maker 版本',
+      'node.checking': '正在检测 Node.js 环境...',
+      'node.found': '检测到 Node.js 环境',
+      'tips.title': 'Tips:',
+      'tips.line1': '由于 MZ 版本需要调用 GitHub Action 进行云端编译，因此需要授权。',
+      'tips.line2': 'Chronos Seal 不会存储您的信息。每次 Token 都有一个时效性，过期需重新申请。',
+      'tips.deviceQ': '连接不上？',
+      'tips.deviceLink': '使用设备码授权',
+      'tips.proxyToggle': '更改 Proxy 代理地址（高级）▾',
+      'tips.proxyToggleClose': '收起 Proxy 设置 ▴',
+      'github.connect': '连接 GitHub',
+      'github.notConnected': '未连接',
+      'github.connecting': '等待浏览器授权...',
+      'github.starting': '正在启动本地回调服务器...',
+      'github.connected': '已连接为',
+      'github.reconnect': '重新连接',
+      'github.failed': '授权失败',
+      'welcome.preparing': 'Chronos Seal 正在准备就绪',
+      'welcome.wait': '这可能需要一点时间...',
+      'welcome.poem': '海内存知己，天涯若比邻',
+      'welcome.poemAlt': '好久不见',
+      'welcome.ready': 'Chronos Seal 已就绪',
+      'welcome.enter': '✓ 进入主界面',
+      'welcome.done': '准备完成',
+      'status.connected': '已连接',
+      'status.notConnected': '未连接',
+      'dash.seal': '首次加密',
+      'dash.patch': 'ZIP 增量补丁',
+      'dash.settings': '设置',
+      'dash.currentPkg': '当前发行包:',
+      'dash.reinit': '重新初始化',
+      'common.notSelected': '未选择',
+      'common.notSet': '未设置',
+      'common.browse': '浏览',
+      'common.cancel': '取消',
+      'common.start': '开始',
+      'common.doneHome': '完成，返回主页',
+      'seal.titleMv': '首次加密 · 请填写参数（MV 模式）',
+      'seal.titleMz': '首次加密 · 请填写参数（MZ 模式）',
+      'seal.pathMv': '请选择发行包目录（含 www/ 和 Game.exe）：',
+      'seal.pathMz': '请选择发行包路径：',
+      'seal.hint': '5 个壳插件会自动复制到发行包，加密将直接在发行包内进行。',
+      'seal.gameName': '游戏名称：',
+      'seal.version': '版本号：',
+      'confirm.title': '请确认内容正确',
+      'confirm.engine': '引擎：',
+      'confirm.github': 'GitHub账号：',
+      'confirm.path': '发行包目录：',
+      'confirm.githubNoNeed': '（MV 无需）',
+      'confirm.githubAuthorized': '已授权',
+      'confirm.githubNotAuthorized': '未授权',
+      'confirm.notFilled': '未填写',
+      'warning.title': 'Chronos Seal 最后警告',
+      'warning.subtitle': '请确认以下事项！',
+      'warning.1': '1. 选择目标为输出目录，而不是工程文件目录！',
+      'warning.2': '2. 网络环境正常！',
+      'warning.3': '3. 未使用 RM 官方加密！',
+      'warning.4': '4. 加密过程中不要退出！',
+      'warning.cancel': '取消 (ESC)',
+      'warning.start': '开始 (YES)',
+      'progress.title': '加密进行中',
+      'progress.log': '实时日志',
+      'progress.step': '步骤',
+      'sealOk.title': '加密成功完成！',
+      'sealOk.desc': '请留存好密钥文件，不要发送给任何人！',
+      'sealOk.output': '发行包已输出至：',
+      'patch.titleInit': '启用增量补丁',
+      'patch.titleGenerate': '生成增量补丁',
+      'patch.step1': '第 1 步 · 选择工程主文件目录：',
+      'patch.step2': '第 2 步 · 选择游戏名称：',
+      'patch.hint1': '请选择工程文件目录，而非发布包目录。',
+      'patch.hint2': '列表来自本地 Files 目录下的加密记录。',
+      'patch.pleaseSelect': '-- 请选择 --',
+      'patch.progressInit': '正在扫描目录并生成 Hash 快照',
+      'patch.progressGenerate': '正在对比 Hash 并生成增量包',
+      'patchOk.titleInit': '启用完成！',
+      'patchOk.titleGenerate': '生成完成！',
+      'patchOk.desc': '请留存好补丁文件，不要发送给任何人！',
+      'patchOk.output': '补丁包已生成至：',
+      'patchInit.title': '启用增量补丁初始化',
+      'patchInit.desc': '检测到首次加密完成。是否初始化增量补丁？',
+      'patchInit.hint': '增量补丁可以大幅减少后续更新包体积，强烈推荐初始化。',
+      'patchInit.skip': '跳过',
+      'patchInit.start': '开始初始化',
+      'patchWarn.title': '⚠ 确定要跳过吗？',
+      'patchWarn.desc': '跳过的话，在下次完整加密前都不能再启用了，确定吗？',
+      'patchWarn.confirm': '确定跳过',
+      'settings.title': '设置',
+      'settings.kernel': '内核管理',
+      'settings.github': 'Github 管理',
+      'settings.lang': '语言',
+      'settings.engine': '切换引擎',
+      'kernel.current': '当前使用：',
+      'kernel.checkUpdate': '检查 Basic 内核更新',
+      'kernel.switch': '切换',
+      'kernel.currentMark': ' (当前)',
+      'gh.account': '当前账号：',
+      'gh.token': 'Token 状态：',
+      'gh.notLogged': '未登录',
+      'gh.none': '无',
+      'gh.valid': '有效',
+      'gh.refresh': '刷新 Token',
+      'gh.proxy': '更改 Proxy 代理地址',
+      'gh.advanced': '高级 →',
+      'gh.collapse': '收起 ↑',
+      'gh.logout': '退出登录',
+      'about.title': '关于 Chronos Seal',
+      'about.desc': '基于 Basic 内核开发<br>由 Electron 和 Node.js 驱动',
+      'about.docs': '文档',
+      'about.afdian': '爱发电',
+      'proxy.label': 'Proxy 地址：',
+      'proxy.save': '保存',
+      'proxy.hint': '默认使用官方代理。如不信任公共代理，可自建后填入。',
+      'device.title': '设备码授权',
+      'device.step1': '请在浏览器中打开以下地址：',
+      'device.step2': '然后输入以下 8 位代码：',
+      'device.waiting': '等待授权中...',
+      'device.open': '打开浏览器',
+      'device.requesting': '正在请求设备码...',
+      'device.enterCode': '请在浏览器中输入该代码，等待授权中...',
+      'device.expired': '❌ 设备码已过期，请重新获取',
+      'device.success': '✅ 授权成功！',
+      'engine.switchedMv': '✅ 已切换到 MV 模式',
+      'engine.switchToMz': '切换到 MZ 模式需要绑定 GitHub，是否继续？',
+      'proxy.saved': '✅ Proxy 地址已保存：',
+      'logout.confirm': '确定要退出 GitHub 登录吗？',
+      'logout.done': '✅ 已退出登录',
+      'kernel.checking': '正在检查 Basic 内核更新...',
+      'kernel.latest': '✅ 已是最新版本 ',
+      'kernel.switched': '✅ 已切换到内核 ',
+      'folder.selected': '📁 已设置 ',
+      'seal.noPath': '❌ 请先点「浏览」选择目录',
+      'seal.started': '✅ 路径 = ',
+      'seal.startedEnd': '，开始加密',
+      'patchCard.disabled': '当前不可用。请先完成一次完整加密并初始化增量补丁。',
+      'page.notFound': '页面不存在: view-'
+    },
+    en: {
+      'oobe.title': 'Hi! Welcome to Chronos Seal!',
+      'oobe.lang.subtitle': 'Please select a language to continue',
+      'oobe.engine.subtitle': 'Please select your RPG Maker version',
+      'oobe.github.subtitle': 'Please authorize GitHub to continue',
+      'nav.next': 'Next →',
+      'nav.prev': '← Back',
+      'nav.prevPlain': 'Back',
+      'nav.back': '← Return',
+      'lang.zh': '简体中文',
+      'lang.en': 'English',
+      'engine.mv.sub': 'RPG Maker MV',
+      'engine.mz.sub': 'RPG Maker MZ',
+      'engine.subtitle': 'Select the RPG Maker version to use',
+      'node.checking': 'Detecting Node.js environment...',
+      'node.found': 'Node.js environment detected',
+      'tips.title': 'Tips:',
+      'tips.line1': 'MZ requires GitHub Actions for cloud compilation, so authorization is needed.',
+      'tips.line2': 'Chronos Seal never stores your information. Each token has an expiration time.',
+      'tips.deviceQ': 'Cannot connect?',
+      'tips.deviceLink': 'Use device code authorization',
+      'tips.proxyToggle': 'Change Proxy address (Advanced) ▾',
+      'tips.proxyToggleClose': 'Collapse Proxy settings ▴',
+      'github.connect': 'Connect GitHub',
+      'github.notConnected': 'Not connected',
+      'github.connecting': 'Waiting for browser authorization...',
+      'github.starting': 'Starting local callback server...',
+      'github.connected': 'Connected as',
+      'github.reconnect': 'Reconnect',
+      'github.failed': 'Authorization failed',
+      'welcome.preparing': 'Chronos Seal is getting ready',
+      'welcome.wait': 'This may take a moment...',
+      'welcome.poem': 'A bosom friend afar brings a distant land near.',
+      'welcome.poemAlt': 'Long time no see.',
+      'welcome.ready': 'Chronos Seal is ready',
+      'welcome.enter': '✓ Enter Dashboard',
+      'welcome.done': 'Ready',
+      'status.connected': 'Connected',
+      'status.notConnected': 'Not connected',
+      'dash.seal': 'First Seal',
+      'dash.patch': 'ZIP Incremental Patch',
+      'dash.settings': 'Settings',
+      'dash.currentPkg': 'Current package:',
+      'dash.reinit': 'Reinitialize',
+      'common.notSelected': 'Not selected',
+      'common.notSet': 'Not set',
+      'common.browse': 'Browse',
+      'common.cancel': 'Cancel',
+      'common.start': 'Start',
+      'common.doneHome': 'Done, return home',
+      'seal.titleMv': 'First Seal · Parameters (MV)',
+      'seal.titleMz': 'First Seal · Parameters (MZ)',
+      'seal.pathMv': 'Select release package directory (with www/ and Game.exe):',
+      'seal.pathMz': 'Select release package directory:',
+      'seal.hint': '5 shell plugins will be copied automatically. Encryption runs inside the release package.',
+      'seal.gameName': 'Game name:',
+      'seal.version': 'Version:',
+      'confirm.title': 'Please confirm the details',
+      'confirm.engine': 'Engine:',
+      'confirm.github': 'GitHub account:',
+      'confirm.path': 'Release package:',
+      'confirm.githubNoNeed': '(N/A for MV)',
+      'confirm.githubAuthorized': 'Authorized',
+      'confirm.githubNotAuthorized': 'Not authorized',
+      'confirm.notFilled': 'Not filled',
+      'warning.title': 'Chronos Seal — Final Warning',
+      'warning.subtitle': 'Please confirm the following!',
+      'warning.1': '1. Target is the release package, NOT the project directory!',
+      'warning.2': '2. Network connection is stable!',
+      'warning.3': '3. RM official encryption is NOT used!',
+      'warning.4': '4. Do NOT close the app during encryption!',
+      'warning.cancel': 'Cancel (ESC)',
+      'warning.start': 'Start (YES)',
+      'progress.title': 'Encrypting',
+      'progress.log': 'Live Log',
+      'progress.step': 'Step',
+      'sealOk.title': 'Encryption completed!',
+      'sealOk.desc': 'Keep your key files safe. DO NOT share them with anyone!',
+      'sealOk.output': 'Output to:',
+      'patch.titleInit': 'Initialize Incremental Patch',
+      'patch.titleGenerate': 'Generate Incremental Patch',
+      'patch.step1': 'Step 1 · Select project root directory:',
+      'patch.step2': 'Step 2 · Select game name:',
+      'patch.hint1': 'Select the project directory, not the release package.',
+      'patch.hint2': 'List comes from the local Files directory.',
+      'patch.pleaseSelect': '-- Select --',
+      'patch.progressInit': 'Scanning and generating Hash snapshot',
+      'patch.progressGenerate': 'Comparing Hash and packaging patch',
+      'patchOk.titleInit': 'Initialization complete!',
+      'patchOk.titleGenerate': 'Patch generated!',
+      'patchOk.desc': 'Keep your patch files safe. DO NOT share them with anyone!',
+      'patchOk.output': 'Patch saved to:',
+      'patchInit.title': 'Initialize Incremental Patch',
+      'patchInit.desc': 'First encryption complete. Initialize incremental patch now?',
+      'patchInit.hint': 'Incremental patches greatly reduce update size. Highly recommended.',
+      'patchInit.skip': 'Skip',
+      'patchInit.start': 'Initialize',
+      'patchWarn.title': '⚠ Are you sure to skip?',
+      'patchWarn.desc': 'If skipped, patching will be locked until the next full encryption. Continue?',
+      'patchWarn.confirm': 'Yes, skip',
+      'settings.title': 'Settings',
+      'settings.kernel': 'Kernel',
+      'settings.github': 'GitHub',
+      'settings.lang': 'Language',
+      'settings.engine': 'Switch Engine',
+      'kernel.current': 'Current: ',
+      'kernel.checkUpdate': 'Check Basic kernel updates',
+      'kernel.switch': 'Switch',
+      'kernel.currentMark': ' (current)',
+      'gh.account': 'Account:',
+      'gh.token': 'Token status:',
+      'gh.notLogged': 'Not logged in',
+      'gh.none': 'None',
+      'gh.valid': 'Valid',
+      'gh.refresh': 'Refresh Token',
+      'gh.proxy': 'Change Proxy address',
+      'gh.advanced': 'Advanced →',
+      'gh.collapse': 'Collapse ↑',
+      'gh.logout': 'Log out',
+      'about.title': 'About Chronos Seal',
+      'about.desc': 'Built on Basic kernel<br>Powered by Electron & Node.js',
+      'about.docs': 'Docs',
+      'about.afdian': 'Afdian',
+      'proxy.label': 'Proxy address:',
+      'proxy.save': 'Save',
+      'proxy.hint': 'Default is the official proxy. You can self-host and point to your own.',
+      'device.title': 'Device Code Authorization',
+      'device.step1': 'Open the following URL in your browser:',
+      'device.step2': 'Then enter the 8-digit code below:',
+      'device.waiting': 'Waiting for authorization...',
+      'device.open': 'Open browser',
+      'device.requesting': 'Requesting device code...',
+      'device.enterCode': 'Please enter the code in your browser...',
+      'device.expired': '❌ Device code expired, please retry',
+      'device.success': '✅ Authorized!',
+      'engine.switchedMv': '✅ Switched to MV mode',
+      'engine.switchToMz': 'Switching to MZ requires GitHub authorization. Continue?',
+      'proxy.saved': '✅ Proxy address saved: ',
+      'logout.confirm': 'Log out of GitHub?',
+      'logout.done': '✅ Logged out',
+      'kernel.checking': 'Checking Basic kernel updates...',
+      'kernel.latest': '✅ Already up to date: ',
+      'kernel.switched': '✅ Switched to kernel ',
+      'folder.selected': '📁 Set ',
+      'seal.noPath': '❌ Please select a directory first',
+      'seal.started': '✅ Path = ',
+      'seal.startedEnd': ' — starting encryption',
+      'patchCard.disabled': 'Unavailable. Complete a full encryption and initialize a patch first.',
+      'page.notFound': 'Page not found: view-'
+    }
+  };
+
+  function t(key){
+    var lang = (window.appState && window.appState.lang) || 'zh';
+    return (I18N[lang] && I18N[lang][key]) || (I18N.zh[key]) || key;
+  }
+
+  function applyI18n(){
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var key = el.getAttribute('data-i18n');
+      var val = t(key);
+      if (val) el.textContent = val;
+    });
+    // 更新动态内容
+    updateDash();
+    updateOobeProxyToggle();
+    updateSealCfgTexts();
+    updatePatchCfgTitle();
+  }
+
+  function updateOobeProxyToggle(){
+    var toggle = document.getElementById('oobe-proxy-toggle');
+    var box = document.getElementById('oobe-proxy-box');
+    if(!toggle || !box) return;
+    var isOpen = box.style.display !== 'none';
+    toggle.textContent = isOpen ? t('tips.proxyToggleClose') : t('tips.proxyToggle');
+  }
+
+  function updateSealCfgTexts(){
+    var t1 = document.getElementById('seal-config-title');
+    var l1 = document.getElementById('seal-path-label');
+    var h1 = document.getElementById('seal-path-hint');
+    if(window.appState.engine === 'mv'){
+      if(t1) t1.textContent = t('seal.titleMv');
+      if(l1) l1.textContent = t('seal.pathMv');
+    } else {
+      if(t1) t1.textContent = t('seal.titleMz');
+      if(l1) l1.textContent = t('seal.pathMz');
+    }
+    if(h1) h1.textContent = t('seal.hint');
+  }
+
+  function updatePatchCfgTitle(){
+    var t1 = document.getElementById('patch-config-title');
+    if(!t1) return;
+    t1.textContent = (window.appState.patchMode === 'init') ? t('patch.titleInit') : t('patch.titleGenerate');
+  }
+
+  // ============================================================
+  // 状态
+  // ============================================================
+  var appWindow = (window.__TAURI__ && window.__TAURI__.window) ? window.__TAURI__.window.getCurrentWindow() : null;
+
+  var dt = null;
+  window.showDebug = function(msg){
+    var bar = document.getElementById('debug-bar');
+    if(!bar) return;
+    bar.textContent = '[DEBUG] ' + msg;
+    bar.classList.add('visible');
+    if(dt) clearTimeout(dt);
+    dt = setTimeout(function(){ bar.classList.remove('visible'); }, 5000);
+  };
+
+  window.appState = {
+    lang:'zh', engine:'mz',
+    outputPath:'', gameName:'', version:'',
+    patchInputPath:'', patchGameName:'',
+    patchEnabled:true, patchMode:'init',
+    welcomePoemOverride:null,
+    githubConnected:false,
+    githubAccount:'',
+    proxyAddress:'https://proxy.crclare.top',
+    kernelVersion:'V2.2',
+    kernelAvailable:['V2.2','V2.3','V2.4']
+  };
+
+  window.t = t;
+  window.applyI18n = applyI18n;
+
+  var bm = document.getElementById('btn-min'), bc = document.getElementById('btn-close');
+  if(bm && appWindow) bm.onclick = function(){ appWindow.minimize(); };
+  if(bc && appWindow) bc.onclick = function(){ appWindow.close(); };
+
+  window.goTo = function(id){
+    var all = document.querySelectorAll('.view');
+    for(var i=0;i<all.length;i++) all[i].classList.remove('active');
+    var target = document.getElementById('view-'+id);
+    if(target) target.classList.add('active');
+    else showDebug(t('page.notFound') + id);
+
+    if(id==='setup-node') checkNode();
+    if(id==='welcome') welcomeSeq();
+    if(id==='seal-config') initSealCfg();
+    if(id==='seal-confirm') fillConfirm();
+    if(id==='seal-progress') resetSealProg();
+    if(id==='patch-config') initPatchCfg();
+    if(id==='patch-progress') initPatchProg();
+    if(id==='patch-success') initPatchOk();
+    if(id==='settings') initSettings();
+    if(id==='settings-engine') initSettingsEnginePage();
+    if(id==='settings-kernel') initKernelPage();
+    if(id==='settings-github') initGithubPage();
+    if(id==='dashboard') updateDash();
+  };
+
+  window.startSealFlow = function(){ goTo('seal-config'); };
+
+  function updateDash(){
+    if(!window.appState) return;
+    var pc = document.getElementById('card-patch');
+    if(pc) pc.classList.toggle('disabled', !window.appState.patchEnabled);
+    var tt = document.getElementById('dashboard-title');
+    if(tt) tt.textContent = 'Chronos Seal (' + window.appState.engine.toUpperCase() + ' ' + (window.appState.lang === 'zh' ? '模式' : 'Mode') + ')';
+    var ed = document.getElementById('current-engine-display');
+    if(ed) ed.textContent = window.appState.engine.toUpperCase();
+    var ld = document.getElementById('current-lang-display');
+    if(ld) ld.textContent = window.appState.lang === 'zh' ? t('lang.zh') : t('lang.en');
+    var op = document.getElementById('output-path-display');
+    if(op) op.textContent = window.appState.outputPath || t('common.notSelected');
+
+    var gs = document.getElementById('global-status-box');
+    if(gs){
+      if(window.appState.githubConnected){
+        gs.innerHTML = '<span class="dot connected">●</span> ' + (window.appState.githubAccount || t('status.connected'));
+      } else {
+        gs.innerHTML = '<span class="dot disconnected">●</span> ' + t('status.notConnected');
+      }
+    }
+
+    var kc = document.getElementById('settings-kernel-current');
+    if(kc) kc.textContent = window.appState.kernelVersion + ' →';
+  }
+
+  window.handlePatchCardClick = function(){
+    if(!window.appState.patchEnabled){ showDebug(t('patchCard.disabled')); return; }
+    window.appState.patchMode = 'generate';
+    goTo('patch-config');
+  };
+
+  window.closeModal = function(id){ var m=document.getElementById(id); if(m) m.style.display='none'; };
+  window.askPatchInit = function(){ var m=document.getElementById('modal-patch-init'); if(m) m.style.display='flex'; };
+  window.handlePatchInitConfirm = function(isInit){
+    closeModal('modal-patch-init');
+    if(isInit){ window.appState.patchMode='init'; goTo('patch-config'); }
+    else { var m=document.getElementById('modal-patch-warning'); if(m) m.style.display='flex'; }
+  };
+  window.confirmPatchSkip = function(){
+    closeModal('modal-patch-warning');
+    window.appState.patchEnabled = false;
+    goTo('dashboard');
+  };
+
+  window.toggleOobeProxyInput = function(){
+    var box = document.getElementById('oobe-proxy-box');
+    if(!box) return;
+    var isOpen = box.style.display !== 'none';
+    box.style.display = isOpen ? 'none' : 'block';
+    if(!isOpen){
+      var inp = document.getElementById('oobe-proxy-input');
+      if(inp && !inp.value) inp.value = window.appState.proxyAddress;
+    }
+    updateOobeProxyToggle();
+  };
+
+  window.saveOobeProxyAddress = function(){
+    var inp = document.getElementById('oobe-proxy-input');
+    if(!inp) return;
+    window.appState.proxyAddress = inp.value.trim() || 'https://proxy.crclare.top';
+    showDebug(t('proxy.saved') + window.appState.proxyAddress);
+    document.getElementById('oobe-proxy-box').style.display = 'none';
+    updateOobeProxyToggle();
+  };
+
+  window.startDeviceFlow = async function(){
+    var m = document.getElementById('modal-device-flow');
+    if(m) m.style.display = 'flex';
+    var codeEl = document.getElementById('device-code-display');
+    var st = document.getElementById('device-flow-status');
+    if(st) st.textContent = t('device.requesting');
+
+    try {
+      var info = await window.chronosSeal.deviceFlowStart();
+      if(codeEl) codeEl.textContent = info.user_code;
+      if(st) st.textContent = t('device.enterCode');
+      if(window.chronosSeal && window.chronosSeal.openExternal) {
+        window.chronosSeal.openExternal(info.verification_uri);
+      }
+      var interval = (info.interval || 5) * 1000;
+      var startTime = Date.now();
+      var expiresMs = (info.expires_in || 900) * 1000;
+      var poll = async function(){
+        if(Date.now() - startTime > expiresMs) {
+          if(st) st.textContent = t('device.expired');
+          return;
+        }
+        try {
+          var user = await window.chronosSeal.deviceFlowPoll(info.device_code, info.interval);
+          if(user) {
+            if(st) st.textContent = t('device.success');
+            setTimeout(function(){
+              closeModal('modal-device-flow');
+              window.appState.githubConnected = true;
+              window.appState.githubAccount = user.login;
+              updateDash();
+              var ghStatus = document.getElementById('gh-status');
+              var ghBtn = document.getElementById('btn-github-login');
+              if(ghStatus){ ghStatus.textContent = t('github.connected') + ' ' + user.login; ghStatus.className = 'gh-status connected'; }
+              if(ghBtn){ ghBtn.disabled = true; ghBtn.innerHTML = '<span>✓</span> ' + t('github.connected') + ' ' + user.login; }
+            }, 800);
+            return;
+          }
+          setTimeout(poll, interval);
+        } catch (e) {
+          if(st) st.textContent = '❌ ' + e.message;
+        }
+      };
+      setTimeout(poll, interval);
+    } catch (e) {
+      if(st) st.textContent = '❌ ' + e.message;
+    }
+  };
+
+  window.openDeviceFlowUrl = function(){
+    if(window.chronosSeal && window.chronosSeal.openExternal) {
+      window.chronosSeal.openExternal('https://github.com/login/device');
+    }
+  };
+
+  function welcomeSeq(){
+    var prep = document.getElementById('welcome-preparing');
+    var ready = document.getElementById('welcome-ready');
+    var st = document.getElementById('welcome-status-text');
+    var pe = document.getElementById('welcome-poem');
+    if(pe) pe.textContent = window.appState.welcomePoemOverride || t('welcome.poem');
+    if(prep) prep.style.display = 'block';
+    if(ready) ready.style.display = 'none';
+    if(st) st.textContent = t('welcome.preparing');
+    setTimeout(function(){
+      if(prep) prep.style.display = 'none';
+      if(ready) ready.style.display = 'block';
+      if(st) st.textContent = t('welcome.done');
+      window.appState.welcomePoemOverride = null;
+    }, 1500);
+  }
+
+  // 语言卡片
+  function bindLangCards(cid){
+    var g = document.getElementById(cid);
+    if(!g) return;
+    g.addEventListener('click', function(e){
+      var c = e.target.closest('.option-card');
+      if(!c) return;
+      var all = g.querySelectorAll('.option-card');
+      for(var i=0;i<all.length;i++) all[i].classList.remove('active');
+      c.classList.add('active');
+      var lang = c.dataset.value;
+      if(window.appState.lang !== lang){
+        window.appState.lang = lang;
+        applyI18n();
+        if(window.appState.welcomePoemOverride){
+          // 保留覆盖
+        }
+      }
+    });
+  }
+  bindLangCards('lang-options');
+  bindLangCards('settings-lang-options');
+
+  // 引擎卡片
+  function bindEngineCards(cid, isSettings){
+    var g = document.getElementById(cid);
+    if(!g) return;
+    g.addEventListener('click', function(e){
+      var c = e.target.closest('.option-card');
+      if(!c) return;
+      var v = c.dataset.value;
+      var all = g.querySelectorAll('.option-card');
+      for(var i=0;i<all.length;i++) all[i].classList.remove('active');
+      c.classList.add('active');
+      if(!isSettings){
+        window.appState.engine = v;
+      } else {
+        if(v === window.appState.engine) return;
+        if(v === 'mv'){
+          window.appState.engine = 'mv';
+          updateDash();
+          showDebug(t('engine.switchedMv'));
+        } else {
+          var ok = window.confirm(t('engine.switchToMz'));
+          if(!ok){
+            var cards = g.querySelectorAll('.option-card');
+            for(var j=0;j<cards.length;j++) cards[j].classList.remove('active');
+            for(var k=0;k<cards.length;k++){
+              if(cards[k].dataset.value === window.appState.engine) cards[k].classList.add('active');
+            }
+            return;
+          }
+          window.appState.engine = 'mz';
+          window.appState.welcomePoemOverride = t('welcome.poemAlt');
+          goTo('welcome');
+        }
+      }
+    });
+  }
+  bindEngineCards('engine-options', false);
+  bindEngineCards('settings-engine-options', true);
+
+  function initSettingsEnginePage(){
+    var g = document.getElementById('settings-engine-options');
+    if(!g) return;
+    var cards = g.querySelectorAll('.option-card');
+    for(var i=0;i<cards.length;i++){
+      cards[i].classList.toggle('active', cards[i].dataset.value === window.appState.engine);
+    }
+  }
+
+  function initKernelPage(){
+    var list = document.getElementById('kernel-list');
+    if(!list) return;
+    list.innerHTML = '';
+    var versions = window.appState.kernelAvailable;
+    for(var i=0;i<versions.length;i++){
+      (function(v){
+        var item = document.createElement('div');
+        item.className = 'settings-item';
+        var isCur = (v === window.appState.kernelVersion);
+        var mark = isCur ? t('kernel.currentMark') : '';
+        var action = isCur ? '✓' : t('kernel.switch');
+        item.innerHTML = '<span class="settings-icon">◈</span>' +
+                         '<span class="settings-text">' + v + mark + '</span>' +
+                         '<span class="settings-arrow" style="color:' + (isCur ? 'var(--accent)' : 'var(--text-dim)') + ';">' + action + '</span>';
+        item.onclick = function(){
+          if(v === window.appState.kernelVersion) return;
+          window.appState.kernelVersion = v;
+          initKernelPage();
+          updateDash();
+          showDebug(t('kernel.switched') + v);
+        };
+        list.appendChild(item);
+      })(versions[i]);
+    }
+    var cur = document.getElementById('kernel-current-version');
+    if(cur) cur.textContent = window.appState.kernelVersion;
+  }
+
+  window.checkKernelUpdate = function(){
+    showDebug(t('kernel.checking'));
+    setTimeout(function(){
+      showDebug(t('kernel.latest') + window.appState.kernelVersion);
+    }, 1500);
+  };
+
+  function initGithubPage(){
+    var acc = document.getElementById('gh-manage-account');
+    var tk = document.getElementById('gh-manage-token-status');
+    if(acc) acc.textContent = window.appState.githubConnected ? (window.appState.githubAccount || '—') : t('gh.notLogged');
+    if(tk) tk.textContent = window.appState.githubConnected ? t('gh.valid') : t('gh.none');
+    var pi = document.getElementById('gh-proxy-input');
+    if(pi && !pi.value) pi.value = window.appState.proxyAddress;
+  }
+
+  window.refreshGithubToken = function(){
+    showDebug(t('gh.refresh') + '...');
+    setTimeout(function(){ showDebug('✅'); }, 1200);
+  };
+
+  window.toggleProxyInput = function(){
+    var box = document.getElementById('proxy-input-box');
+    var arrow = document.getElementById('gh-proxy-arrow');
+    if(!box) return;
+    var isOpen = box.style.display !== 'none';
+    box.style.display = isOpen ? 'none' : 'block';
+    if(arrow) arrow.textContent = isOpen ? t('gh.advanced') : t('gh.collapse');
+  };
+
+  window.saveProxyAddress = function(){
+    var inp = document.getElementById('gh-proxy-input');
+    if(!inp) return;
+    window.appState.proxyAddress = inp.value.trim() || 'https://proxy.crclare.top';
+    showDebug(t('proxy.saved') + window.appState.proxyAddress);
+    document.getElementById('proxy-input-box').style.display = 'none';
+    document.getElementById('gh-proxy-arrow').textContent = t('gh.advanced');
+  };
+
+  window.logoutGithub = function(){
+    var ok = window.confirm(t('logout.confirm'));
+    if(!ok) return;
+    window.appState.githubConnected = false;
+    window.appState.githubAccount = '';
+    initGithubPage();
+    updateDash();
+    showDebug(t('logout.done'));
+  };
+
+  window.toggleCustomSelect = function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var open = el.classList.contains('open');
+    var all = document.querySelectorAll('.custom-select');
+    for(var i=0;i<all.length;i++){
+      all[i].classList.remove('open');
+      var op = all[i].querySelector('.custom-select-options');
+      if(op){ op.style.position = ''; op.style.top = ''; op.style.left = ''; op.style.width = ''; }
+    }
+    if(!open){
+      el.classList.add('open');
+      var trigger = el.querySelector('.custom-select-trigger');
+      var options = el.querySelector('.custom-select-options');
+      if(trigger && options){
+        var rect = trigger.getBoundingClientRect();
+        options.style.position = 'fixed';
+        options.style.top = (rect.bottom + 4) + 'px';
+        options.style.left = rect.left + 'px';
+        options.style.width = rect.width + 'px';
+      }
+    }
+  };
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('.custom-select')){
+      var all = document.querySelectorAll('.custom-select');
+      for(var i=0;i<all.length;i++){
+        all[i].classList.remove('open');
+        var op = all[i].querySelector('.custom-select-options');
+        if(op){ op.style.position = ''; op.style.top = ''; op.style.left = ''; op.style.width = ''; }
+      }
+    }
+  });
+
+  function checkNode(){
+    var nb = document.getElementById('btn-node-next');
+    var st = document.getElementById('node-status-text');
+    var nv = document.getElementById('node-version');
+    var sp = document.getElementById('node-spinner');
+    if(nb) nb.disabled = true;
+    if(st) st.textContent = t('node.checking');
+    if(nv) nv.textContent = '...';
+    if(sp) sp.style.display = 'inline-block';
+    setTimeout(function(){
+      if(nv) nv.textContent = 'Node.js v24-LTS';
+      if(st) st.textContent = t('node.found');
+      if(sp) sp.style.display = 'none';
+      if(nb) nb.disabled = false;
+    }, 1200);
+  }
+
+  (function(){
+    var b = document.getElementById('btn-github-login');
+    if(!b) return;
+    b.onclick = async function(){
+      var st = document.getElementById('gh-status');
+      b.disabled = true;
+      b.innerHTML = t('github.connecting');
+      if(st) st.textContent = t('github.starting');
+      try {
+        var user = await window.chronosSeal.githubLogin(window.appState.proxyAddress);
+        b.innerHTML = '<span>✓</span> ' + t('github.connected') + ' ' + user.login;
+        if(st){ st.textContent = t('github.connected') + ' ' + user.login; st.className = 'gh-status connected'; }
+        window.appState.githubConnected = true;
+        window.appState.githubAccount = user.login;
+        updateDash();
+      } catch (e) {
+        b.disabled = false;
+        b.innerHTML = '<span>➔</span> ' + t('github.reconnect');
+        if(st){ st.textContent = t('github.failed') + ': ' + e.message; st.className = 'gh-status'; }
+      }
+    };
+  })();
+
+  window.pickFolder = function(inputId){
+    var p = (inputId === 'seal-output-path') ? 'C:\\Release\\TestGame' : 'C:\\Project\\TestGame';
+    var inp = document.getElementById(inputId);
+    if(inp) inp.value = p;
+    if(inputId === 'seal-output-path') window.appState.outputPath = p;
+    if(inputId === 'patch-input-path') window.appState.patchInputPath = p;
+    showDebug(t('folder.selected') + inputId + ' = ' + p);
+  };
+
+  function initSealCfg(){
+    updateSealCfgTexts();
+    var i = document.getElementById('seal-output-path');
+    if(i) i.value = '';
+    window.appState.outputPath = '';
+  }
+
+  window.sealConfigNext = function(){
+    if(!window.appState.outputPath){ showDebug(t('seal.noPath')); return; }
+    goTo('seal-confirm');
+  };
+
+  function fillConfirm(){
+    var gn = document.getElementById('seal-game-name');
+    var vr = document.getElementById('seal-version');
+    window.appState.gameName = (gn && gn.value) || t('confirm.notFilled');
+    window.appState.version = (vr && vr.value) || t('confirm.notFilled');
+    var a = document.getElementById('confirm-game-name'); if(a) a.textContent = window.appState.gameName;
+    var b = document.getElementById('confirm-version'); if(b) b.textContent = window.appState.version;
+    var c = document.getElementById('confirm-engine'); if(c) c.textContent = window.appState.engine.toUpperCase();
+    var e = document.getElementById('confirm-github');
+    if(e) e.textContent = (window.appState.engine === 'mv') ? t('confirm.githubNoNeed') : (window.appState.githubConnected ? t('confirm.githubAuthorized') : t('confirm.githubNotAuthorized'));
+    var f = document.getElementById('confirm-output');
+    if(f) f.textContent = window.appState.outputPath || t('common.notSelected');
+    var g = document.getElementById('output-path-display');
+    if(g) g.textContent = window.appState.outputPath || t('common.notSelected');
+  }
+
+  function resetSealProg(){
+    var lb = document.getElementById('seal-log-box');
+    var fl = document.getElementById('seal-progress-fill');
+    var tx = document.getElementById('seal-progress-text');
+    var sl = document.getElementById('seal-step-list');
+    if(lb) lb.innerHTML = '';
+    if(fl) fl.style.width = '0%';
+    if(tx) tx.textContent = '0%';
+    if(sl){
+      var isZh = window.appState.lang === 'zh';
+      var mz = isZh ?
+        ['① 派生种子','② 生成 5 个壳插件','③ 提交 GitHub Actions','④ 云端编译 decryptor.node','⑤ 产物下载','⑥ 派生随机壳','⑦ 部署壳 + 替换 index.html','⑧ 清理 plugins.js + 加密资源'] :
+        ['① Derive seed','② Generate 5 shell plugins','③ Submit to GitHub Actions','④ Cloud compile decryptor.node','⑤ Download artifacts','⑥ Derive random shell','⑦ Deploy shell + replace index.html','⑧ Clean plugins.js + encrypt assets'];
+      var mv = isZh ?
+        ['① 派生种子','② 生成 5 个壳插件','③ 复制壳到发行包','④ 派生随机壳','⑤ 替换 index.html','⑥ 清理 plugins.js','⑦ 加密素材'] :
+        ['① Derive seed','② Generate 5 shell plugins','③ Copy shells to release','④ Derive random shell','⑤ Replace index.html','⑥ Clean plugins.js','⑦ Encrypt assets'];
+      var steps = (window.appState.engine === 'mv') ? mv : mz;
+      var html = '';
+      for(var i=0;i<steps.length;i++){
+        html += '<li id="step-'+(i+1)+'" class="step'+(i===0?' active':'')+'">'+steps[i]+'</li>';
+      }
+      sl.innerHTML = html;
+    }
+  }
+
+  window.startSeal = function(){
+    if(!window.appState.outputPath){ showDebug(t('seal.noPath')); return; }
+    showDebug(t('seal.started') + window.appState.outputPath + t('seal.startedEnd'));
+    goTo('seal-progress');
+    var total = (window.appState.engine === 'mv') ? 7 : 8;
+    var step = 1;
+    var timer = setInterval(function(){
+      if(step > total){
+        clearInterval(timer);
+        var fp = document.getElementById('seal-final-path');
+        if(fp) fp.textContent = window.appState.outputPath;
+        goTo('seal-success');
+        return;
+      }
+      var steps = document.querySelectorAll('#seal-step-list .step');
+      for(var i=0;i<steps.length;i++) steps[i].className = 'step';
+      for(var j=1;j<step;j++){ var el=document.getElementById('step-'+j); if(el) el.className='step completed'; }
+      var cur = document.getElementById('step-'+step); if(cur) cur.className='step active';
+      var pct = Math.round((step/total)*100);
+      var fl = document.getElementById('seal-progress-fill'); if(fl) fl.style.width = pct + '%';
+      var tx = document.getElementById('seal-progress-text'); if(tx) tx.textContent = pct + '%';
+      var lb = document.getElementById('seal-log-box');
+      if(lb){
+        var ln = document.createElement('div');
+        ln.textContent = '[' + new Date().toLocaleTimeString() + '] ' + t('progress.step') + ' ' + step + '/' + total + '...';
+        lb.appendChild(ln);
+        lb.scrollTop = lb.scrollHeight;
+      }
+      step++;
+    }, 800);
+  };
+
+  function initPatchCfg(){
+    updatePatchCfgTitle();
+    var i = document.getElementById('patch-input-path');
+    if(i) i.value = '';
+    window.appState.patchInputPath = '';
+    window.appState.patchGameName = '';
+    var gs = document.getElementById('game-select');
+    if(gs){
+      gs.querySelector('.custom-select-value').textContent = t('patch.pleaseSelect');
+      var all = gs.querySelectorAll('.custom-select-option');
+      for(var i2=0;i2<all.length;i2++) all[i2].classList.remove('selected');
+    }
+    loadGameList();
+  }
+
+  function loadGameList(){
+    var ob = document.getElementById('game-select-options');
+    if(!ob) return;
+    ob.innerHTML = '';
+    var games = ['MyRPG V1.0.0','DragonQuest V0.5.2','PixelAdventure V2.1.0'];
+    for(var i=0;i<games.length;i++){
+      (function(name){
+        var opt = document.createElement('div');
+        opt.className = 'custom-select-option';
+        opt.dataset.value = name;
+        opt.textContent = name;
+        opt.addEventListener('click', function(e){
+          e.stopPropagation();
+          window.appState.patchGameName = name;
+          ob.parentElement.querySelector('.custom-select-value').textContent = name;
+          var all = ob.querySelectorAll('.custom-select-option');
+          for(var j=0;j<all.length;j++) all[j].classList.remove('selected');
+          opt.classList.add('selected');
+          ob.parentElement.classList.remove('open');
+        });
+        ob.appendChild(opt);
+      })(games[i]);
+    }
+  }
+
+  function initPatchProg(){
+    var lb = document.getElementById('patch-log-box'); if(lb) lb.innerHTML = '';
+    var fl = document.getElementById('patch-progress-fill'); if(fl) fl.style.width = '0%';
+    var tx = document.getElementById('patch-progress-text'); if(tx) tx.textContent = '0%';
+    var tt = document.getElementById('patch-progress-title');
+    if(tt) tt.textContent = (window.appState.patchMode === 'init') ? t('patch.progressInit') : t('patch.progressGenerate');
+  }
+
+  function initPatchOk(){
+    var t1 = document.getElementById('patch-success-title');
+    var d = document.getElementById('patch-success-desc');
+    var o = document.getElementById('patch-success-output');
+    var fp = document.getElementById('patch-final-path');
+    if(window.appState.patchMode === 'init'){
+      if(t1) t1.textContent = t('patchOk.titleInit');
+      if(d) d.textContent = t('patchOk.desc');
+      if(o) o.style.display = 'none';
+    } else {
+      if(t1) t1.textContent = t('patchOk.titleGenerate');
+      if(d) d.textContent = t('patchOk.desc');
+      if(o) o.style.display = 'block';
+      if(fp){
+        var zn = (window.appState.engine === 'mv' ? 'patch_MV.zip' : 'patch_MZ.zip');
+        fp.textContent = window.appState.patchInputPath + '\\' + zn;
+      }
+    }
+  }
+
+  window.startPatch = function(){
+    if(!window.appState.patchInputPath){ showDebug('❌'); return; }
+    if(!window.appState.patchGameName){ showDebug('❌'); return; }
+    goTo('patch-progress');
+    var p = 0;
+    var init = window.appState.patchMode === 'init';
+    var timer = setInterval(function(){
+      p += 10;
+      if(p > 100){
+        clearInterval(timer);
+        window.appState.patchEnabled = true;
+        goTo('patch-success');
+        return;
+      }
+      var fl = document.getElementById('patch-progress-fill'); if(fl) fl.style.width = p + '%';
+      var tx = document.getElementById('patch-progress-text'); if(tx) tx.textContent = p + '%';
+      var lb = document.getElementById('patch-log-box');
+      if(lb){
+        var ln = document.createElement('div');
+        ln.textContent = '[' + new Date().toLocaleTimeString() + '] ' + p + '%...';
+        lb.appendChild(ln);
+        lb.scrollTop = lb.scrollHeight;
+      }
+    }, 300);
+  };
+
+  function initSettings(){
+    var y = document.getElementById('copyright-year');
+    if(y) y.textContent = new Date().getFullYear();
+    var tipsZh = ['海内存知己，天涯若比邻。','加密不仅是技术，更是对创作者心血的保护。','即使身处黑暗，代码也能点亮希望。','真正的安全，是让破解者觉得不值得。','Chronos Seal：为独立游戏保驾护航。','千里之行，始于足下。'];
+    var tipsEn = ['A bosom friend afar brings a distant land near.','Encryption is not just tech — it protects creators.','Even in darkness, code can light the way.','Real security makes cracking not worth it.','Chronos Seal: safeguarding indie games.','A journey of a thousand miles begins with a single step.'];
+    var tips = window.appState.lang === 'zh' ? tipsZh : tipsEn;
+    var tb = document.getElementById('random-tip-box');
+    if(tb) tb.textContent = tips[Math.floor(Math.random() * tips.length)];
+    updateDash();
+  }
+
+  // 启动
+  applyI18n();
+  setTimeout(function(){ showDebug('GUI ready'); }, 200);
+})();
+</script>
+
+</body>
+</html>
