@@ -1,0 +1,52 @@
+{
+  "name": "chronos-seal-gui",
+  "version": "1.0.0",
+  "description": "Chronos Seal GUI - RPG Maker game protection suite",
+  "main": "main.js",
+  "author": "CLARE-XHL",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --ia32"
+  },
+  "devDependencies": {
+    "electron": "22.3.27",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "top.crclare.chronos-seal",
+    "productName": "Chronos Seal",
+    "copyright": "Copyright © 2026 CrCLARE Studio",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "!**/*.map",
+      "!**/node_modules/**/*"
+    ],
+    "extraResources": [
+      { "from": "Tools", "to": "Tools" }
+    ],
+    "win": {
+      "target": [
+        { "target": "zip", "arch": ["ia32"] }
+      ],
+      "icon": "build/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "Chronos-Seal-${version}.zip",
+      "signingHashAlgorithms": ["sha256"],
+      "certificateFile": "build/CrCLARE_Studio.pfx",
+      "certificatePassword": "${env.CSC_KEY_PASSWORD}",
+      "timeStampServer": "http://timestamp.digicert.com"
+    },
+    "compression": "maximum",
+    "asar": true,
+    "asarUnpack": [
+      "Tools/**/*"
+    ]
+  }
+}
