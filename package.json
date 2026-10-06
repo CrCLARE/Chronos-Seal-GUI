@@ -10,7 +10,7 @@
     "dist": "electron-builder --win --ia32"
   },
   "devDependencies": {
-    "electron": "22.3.27",
+    "electron": "41.10.6",
     "electron-builder": "24.13.3"
   },
   "build": {
