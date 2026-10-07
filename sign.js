@@ -85,7 +85,14 @@ logInfo('已写入 manifest.sig');
 
 const publicKeyObj = crypto.createPublicKey(privateKeyObj);
 const verifyOk = crypto.verify(null, manifestBuffer, publicKeyObj, signature);
-logInfo('自检验签: ' + (verifyOk ? '✅ 通过' : '❌ 失败'));
+
+// 终极防呆：如果自检失败，直接报错并退出，强制 CI 变红，绝不把错误签名推上去
+if (!verifyOk) {
+  logError('自检验签: ❌ 失败！生成的文件签名与公钥不匹配，拒绝提交！');
+  process.exit(1);
+}
+
+logInfo('自检验签: ✅ 通过');
 
 console.log('');
 console.log('========================================');
