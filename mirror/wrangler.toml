@@ -1,4 +1,4 @@
-name = "chronos-mirror"
+name = "chronos-seal-gui"
 main = "worker.js"
 compatibility_date = "2026-10-01"
 
