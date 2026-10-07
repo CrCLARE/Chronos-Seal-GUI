@@ -7,6 +7,10 @@ on:
         description: 'Ed25519 私钥（Base64，44 字符）'
         required: true
         type: string
+      pat_token:
+        description: 'GitHub PAT（Contents + Workflows 读写）'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -19,6 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ github.event.inputs.pat_token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,9 +34,7 @@ jobs:
         env:
           SIGNING_KEY: ${{ github.event.inputs.signing_key }}
         run: |
-          # 关键：把私钥值加入日志屏蔽列表，防止后续误打印
           echo "::add-mask::$SIGNING_KEY"
-          # 用 printf 而不是 echo，避免末尾换行污染 Base64
           printf '%s' "$SIGNING_KEY" > /tmp/private.key
           KEY_LEN=$(wc -c < /tmp/private.key)
           echo "Key written: $KEY_LEN bytes"
@@ -55,9 +58,13 @@ jobs:
         run: rm -f /tmp/private.key
 
       - name: Commit signed manifests
+        env:
+          PAT_TOKEN: ${{ github.event.inputs.pat_token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "::add-mask::$PAT_TOKEN"
+          git config user.name "CLARE-XHL"
+          git config user.email "1204189977@qq.com"
+          git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
           git add Tools/**/manifest.json Tools/**/manifest.sig 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
