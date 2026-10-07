@@ -49,7 +49,8 @@ jobs:
           for dir in Tools/*/MV Tools/*/MZ; do
             if [ -d "$dir" ]; then
               echo "==> Signing: $dir"
-              node sign.js "$dir" /tmp/private.key || true
+              # 删掉 || true，签名失败立刻报错退出
+              node sign.js "$dir" /tmp/private.key
             fi
           done
 
@@ -65,9 +66,14 @@ jobs:
           git config user.name "CLARE-XHL"
           git config user.email "1204189977@qq.com"
           git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
-          git add Tools/**/manifest.json Tools/**/manifest.sig 2>/dev/null || true
+          
+          # 强制添加并删除屏蔽错误，防止 .gitignore 作妖
+          git add -f Tools/**/manifest.json Tools/**/manifest.sig
+          
           if git diff --cached --quiet; then
-            echo "No changes to commit"
+            # 如果没抓到任何变化，说明签名根本没成功生成或者没被添加
+            echo "::error::No signed manifests detected! The signing step likely failed silently."
+            exit 1
           else
             git commit -m "chore: auto-sign kernel [skip ci]"
             git push
